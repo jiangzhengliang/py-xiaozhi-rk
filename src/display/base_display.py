@@ -100,6 +100,11 @@ class BaseDisplay(ABC):
         pass
 
     @abstractmethod
+    def send_text(self, text: str):
+        """发送文本消息"""
+        pass
+
+    @abstractmethod
     def stop_keyboard_listener(self):
         """停止键盘监听"""
         pass

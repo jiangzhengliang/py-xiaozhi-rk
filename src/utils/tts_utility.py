@@ -5,7 +5,9 @@ import soundfile as sf
 import io
 from pydub import AudioSegment
 import numpy as np
+import logging
 
+logger = logging.getLogger(__name__)
 
 class TtsUtility:
     def __init__(self, audio_config):
@@ -27,6 +29,19 @@ class TtsUtility:
         audio_data = await self.generate_tts(text)
 
         try:
+            # 检查是否安装了ffmpeg
+            import shutil
+            if not shutil.which('ffmpeg'):
+                logger.error("未找到ffmpeg，请按以下步骤安装：")
+                logger.error("1. 访问 https://github.com/BtbN/FFmpeg-Builds/releases 下载最新版本的ffmpeg")
+                logger.error("2. 解压下载的文件，将bin目录中的ffmpeg.exe复制到一个固定目录")
+                logger.error("3. 将该目录添加到系统环境变量PATH中：")
+                logger.error("   - 右键'此电脑' -> 属性 -> 高级系统设置 -> 环境变量")
+                logger.error("   - 在系统变量中找到'Path'，点击编辑")
+                logger.error("   - 点击'新建'，添加ffmpeg.exe所在的目录路径")
+                logger.error("4. 重启终端或IDE后重试")
+                return None
+
             # 2. 将 MP3 数据转换为 PCM 数据
             audio = AudioSegment.from_mp3(io.BytesIO(audio_data))
 

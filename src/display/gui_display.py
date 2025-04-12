@@ -4,6 +4,7 @@ from tkinter import ttk
 import queue
 import logging
 import time
+import asyncio
 from typing import Optional, Callable
 from pynput import keyboard as pynput_keyboard
 
@@ -20,7 +21,7 @@ class GuiDisplay(BaseDisplay):
         # 创建主窗口
         self.root = tk.Tk()
         self.root.title("小智Ai语音控制")
-        self.root.geometry("300x300")
+        self.root.geometry("300x320")
 
         # 状态显示
         self.status_frame = ttk.Frame(self.root)
@@ -51,6 +52,18 @@ class GuiDisplay(BaseDisplay):
         )
         self.volume_scale.set(self.current_volume)
         self.volume_scale.pack(side=tk.LEFT, padx=10)
+
+        # 文本输入框和发送按钮
+        self.input_frame = ttk.Frame(self.root)
+        self.input_frame.pack(pady=10, fill=tk.X, padx=20)
+        self.text_input = ttk.Entry(self.input_frame)
+        self.text_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # 绑定回车键事件
+        self.text_input.bind("<Return>", lambda event: self._on_send_button_click())
+        self.send_btn = ttk.Button(self.input_frame, text="发送", command=self._on_send_button_click)
+        self.send_btn.pack(side=tk.LEFT, padx=(10, 0))
+        # 设置文本输入框为默认焦点
+        self.text_input.focus_set()
 
         # 控制按钮
         self.btn_frame = ttk.Frame(self.root)
@@ -110,7 +123,8 @@ class GuiDisplay(BaseDisplay):
                       emotion_callback: Optional[Callable] = None,
                       mode_callback: Optional[Callable] = None,
                       auto_callback: Optional[Callable] = None,
-                      abort_callback: Optional[Callable] = None):
+                      abort_callback: Optional[Callable] = None,
+                      send_text_callback: Optional[Callable] = None):
         """设置回调函数"""
         self.button_press_callback = press_callback
         self.button_release_callback = release_callback
@@ -120,6 +134,7 @@ class GuiDisplay(BaseDisplay):
         self.mode_callback = mode_callback
         self.auto_callback = auto_callback
         self.abort_callback = abort_callback
+        self.send_text_callback = send_text_callback
 
 
     def _process_updates(self):
@@ -176,6 +191,46 @@ class GuiDisplay(BaseDisplay):
                 self.abort_callback()
         except Exception as e:
             self.logger.error(f"打断按钮回调执行失败: {e}")
+
+    def _on_send_button_click(self):
+        """发送按钮点击处理"""
+        try:
+            text = self.text_input.get().strip()
+            if not text:
+                return
+            
+            if not self.send_text_callback:
+                self.logger.warning("未设置发送文本回调函数")
+                return
+                
+            # 获取应用程序的事件循环并在其中运行协程
+            from src.application import Application
+            app = Application.get_instance()
+            if not app or not app.loop:
+                self.logger.error("无法获取应用程序事件循环")
+                return
+                
+            # 发送消息
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    self.send_text_callback(text),
+                    app.loop
+                )
+                # 清空输入框
+                self.text_input.delete(0, tk.END)
+                # 重新设置焦点到输入框
+                self.text_input.focus_set()
+            except Exception as e:
+                self.logger.error(f"发送文本消息失败: {e}")
+                return
+        except Exception as e:
+            self.logger.error(f"处理发送按钮点击事件失败: {e}")
+            return
+
+    def send_text(self, text: str):
+        """发送文本消息"""
+        if self.send_text_callback:
+            self.send_text_callback(text)
 
     def _on_mode_button_click(self):
         """对话模式切换按钮点击事件"""
