@@ -5,6 +5,7 @@ import queue
 import logging
 import time
 import asyncio
+import json
 from typing import Optional, Callable
 from pynput import keyboard as pynput_keyboard
 
@@ -21,7 +22,7 @@ class GuiDisplay(BaseDisplay):
         # 创建主窗口
         self.root = tk.Tk()
         self.root.title("小智Ai语音控制")
-        self.root.geometry("300x320")
+        self.root.geometry("360x320")
 
         # 状态显示
         self.status_frame = ttk.Frame(self.root)
@@ -62,6 +63,9 @@ class GuiDisplay(BaseDisplay):
         self.text_input.bind("<Return>", lambda event: self._on_send_button_click())
         self.send_btn = ttk.Button(self.input_frame, text="发送", command=self._on_send_button_click)
         self.send_btn.pack(side=tk.LEFT, padx=(10, 0))
+        # 添加GPS按钮
+        self.gps_btn = ttk.Button(self.input_frame, text="GPS", command=self._on_gps_button_click)
+        self.gps_btn.pack(side=tk.LEFT, padx=(5, 0))
         # 设置文本输入框为默认焦点
         self.text_input.focus_set()
 
@@ -406,3 +410,63 @@ class GuiDisplay(BaseDisplay):
                 self.logger.info("键盘监听器已停止")
             except Exception as e:
                 self.logger.error(f"停止键盘监听器失败: {e}")
+
+    def _on_gps_button_click(self):
+        """GPS按钮点击处理"""
+        try:
+            if not self.send_text_callback:
+                self.logger.warning("未设置发送文本回调函数")
+                return
+                
+            # 获取应用程序的事件循环并在其中运行协程
+            from src.application import Application
+            app = Application.get_instance()
+            if not app or not app.loop:
+                self.logger.error("无法获取应用程序事件循环")
+                return
+                
+            # 发送GPS消息
+            try:
+                asyncio.run_coroutine_threadsafe(
+                    self._send_gps_location(),
+                    app.loop
+                )
+            except Exception as e:
+                self.logger.error(f"发送GPS消息失败: {e}")
+                return
+        except Exception as e:
+            self.logger.error(f"处理GPS按钮点击事件失败: {e}")
+            return
+    
+    async def _send_gps_location(self):
+        """发送GPS位置信息"""
+        try:
+            from src.application import Application
+            app = Application.get_instance()
+            if not app or not app.protocol:
+                self.logger.error("无法获取应用程序实例或协议")
+                return
+                
+            # GPS位置数据
+            gps_message = {
+                "type": "gps", 
+                "msg": {
+                    "lon": 113.367387, 
+                    "lat": 23.134382, 
+                    "ver": 1
+                }
+            }
+            
+            # 确保WebSocket连接已打开
+            if not app.protocol.is_audio_channel_opened():
+                success = await app.protocol.open_audio_channel()
+                if not success:
+                    self.logger.error("打开音频通道失败")
+                    return
+                    
+            # 发送GPS数据
+            await app.protocol.send_text(json.dumps(gps_message))
+            self.logger.info("已发送GPS位置信息")
+            
+        except Exception as e:
+            self.logger.error(f"发送GPS位置信息失败: {e}")
