@@ -155,8 +155,26 @@ class WebsocketProtocol(Protocol):
                     self.on_network_error(f"发送消息失败: {str(e)}")
 
     def is_audio_channel_opened(self) -> bool:
-        """检查音频通道是否打开"""
-        return self.websocket is not None and self.connected
+        """检查音频通道是否打开
+        返回:
+            bool: 如果连接有效且活跃则返回True，否则返回False
+        """
+        if not self.websocket or not self.connected:
+            return False
+            
+        try:
+            # 检查WebSocket连接状态
+            if self.websocket.closed:
+                self.connected = False
+                return False
+            # 检查底层传输连接状态
+            if not self.websocket.transport or self.websocket.transport.is_closing():
+                self.connected = False
+                return False
+            return True
+        except Exception:
+            self.connected = False
+            return False
 
     async def open_audio_channel(self) -> bool:
         """建立 WebSocket 连接
