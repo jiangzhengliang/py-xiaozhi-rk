@@ -1,9 +1,19 @@
+rustypot==0.1.0
+onnxruntime==1.18.1
+numpy==1.26.4
+adafruit-circuitpython-bno055==5.4.13
+scipy==1.15.1
+pygame==2.6.0
+pypot @ git+https://github.com/pollen-robotics/pypot@support-feetech-sts3215
+openai==1.70.0
+python-periphery==2.4.1
+adafruit-extended-bus==1.0.2
 annotated-types==0.7.0
 certifi==2025.1.31
 cffi==1.17.1
 comtypes==1.4.6
 cryptography==44.0.1
-numpy
+#numpy
 openai
 opuslib==3.0.1
 paho-mqtt==2.1.0
@@ -19,5 +29,8 @@ webrtcvad-wheels==2.0.14
 websockets==11.0.3
 colorlog==6.9.0
 soundfile>=0.12.1
-pygame==2.6.1
-scipy
+#pygame==2.6.1
+#scipy
+pillow==8.0.1
+pyparsing==2.3.1
+pytz==2020.1
